@@ -46,3 +46,11 @@ $bitbake core-image-base
 Terminado este proceso podemos cargar nuestra imagen en la tarjeta SD y botear la imagen desde la plataforma.
 
 ### Capas y Recetas Instaladas en la Imagen 📦
+Las capas y recetas que se requerían, fueron consultadas en la página http://layers.openembedded.org/layerindex/branch/sumo/layers/. Las capas agregadas se encuentran en el archivo *bblayer.conf* y las recetas fueron agregadas en el archivo *local.conf*. La capa *meta-progra* es una capa personalizada, desarrollada para la inclusión de la aplicación en python. 
+
+### Aplicación en Python 💻
+La aplicación de desarrolló en tres partes: la primera parte era un programa que permitía la captura de video desde la cámara conectada a la Raspberry Pi 3, el segundo programa permite la detección de movimiento junto al reconocimiento facial para el informe de inclusiones y el último programa es una interfaz gráfica para que el sistema sea amigable con el usuario.
+
+### Problemas Encontrados ❌
+* De los programas mencionados anteriormente, solamente fue posible instalar uno en la imagen, el programa de detección de intrusión, a pesar de ser implementado dentro de *meta-progra* no fue posible ejecutarlo dentro de la Raspberry Pi 3 debido a problemas provenientes de los archivos *Haarcascade.xml* los cuales son necesarios para la detección, además, la interfaz gráfica hace uso de *tkinter*, módulo que, aunque fue incluido en el *local.conf*, la imagen nuna fue capaz de reconocer el módulo.
+* En un inicio el proyecto fue pensado para ser desarrollado en QEMU, sin embargo, no encontramos la manera de detectar la cámara para el desarrollo del sistema de vigilancia, por esta razón cambiamos a la Raspberry Pi 3.
