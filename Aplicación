@@ -1,0 +1,239 @@
+from tkinter import *
+import numpy as np
+import cv2
+from datetime import datetime
+import time
+from PIL import Image
+class Ventana:
+    def __init__(self, master):
+        self.master = master
+        master.title("Sistema de Televigilancia")
+        self.etiqueta = Label(master, text="Menú Sistema de Televigilancia.\n Seleccione algunas de las siguientes opciones:")
+        self.etiqueta.pack()
+        self.botonvideotr = Button(master, text="Video en tiempo real", command=self.videotr)
+        self.botonvideotr.pack()
+        self.botonregister = Button(master, text="Registro de intrusiones", command=self.register)
+        self.botonregister.pack()
+        self.botonimages = Button(master, text="Capturas de intrusiones", command=self.images)
+        self.botonimages.pack()
+        self.botond = Button(master, text="Detección", command=self.d)
+        self.botond.pack()
+    def videotr(self):
+        ver_video()
+    def register(self):
+        vr=VentanaR(Tk())
+    def images(self):
+        vi=VentanaI(Tk())
+    def d(self):
+        detectar()
+class VentanaR:
+    def __init__(self,master):
+        self.master = master
+        master.title("Selección de Registro")
+        self.etiqueta = Label(master,text="¿Cuál registro desea consultar?")
+        self.etiqueta.pack()
+        self.botondiario = Button(master, text="Registro diario", command=self.diario)
+        self.botondiario.pack()
+        self.botongen = Button(master, text="Registro General", command=self.gen)
+        self.botongen.pack()
+        master.geometry("320x75")
+        master.config(bg="yellow")
+    def diario(self):
+        fic = open('Registro_Diario.txt', "r")
+        for line in fic:
+            print(line,"\n")
+        fic.close()
+    def gen(self):
+        fic = open('Registro_General.txt', "r")
+        for line in fic:
+            print(line,"\n")
+        fic.close()
+class VentanaI:
+    def __init__(self,master):
+        self.master = master
+        master.title("Selección de imagen")
+        self.etiqueta = Label(master,text="Ingrese número de intrusión")
+        self.etiqueta.pack()
+        master.config(bg="skyblue")
+        master.geometry("320x75")
+        self.numb=Entry(master)
+        self.numb.pack()
+        self.botongetnumb = Button(master, text="Abrir" , command=self.openim)
+        self.botongetnumb.pack()
+    def openim(self):
+        imname="image_" + str(self.numb.get())+ ".png"
+        fn=Image.open(imname)
+        fn.show()
+                  
+def ver_video():
+    captura=cv2.VideoCapture(0)
+    #se crea varibale para caprturar video
+    #en número indica cuál es la cámara que se va a utilizar
+
+    while(captura.isOpened()):
+        ret,imagen=captura.read()
+        #se crea la variable ret (de return) y la variable imagen
+        #captura.read() da argumento en boleano, true o false
+        #true si teneemos la imagen leída
+        #false si no se ha inicilaizado captura de la imagen
+        if ret==True:
+            cv2.imshow('Video',imagen)
+            #se crea ventana con el t´tulo Video donde se muestra la variable imagen o el video
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            #0xFF se pone si se trabaja con una máquina de 64 bits, según OPen CV
+            #con s se detiene video
+            #con brea se sale de while
+    captura.release()
+    #se detiene captura
+    cv2.destroyAllWindows()
+
+def detect_mov(gray,bgGray,img_color):
+    mov=False
+    dif = cv2.absdiff(gray,bgGray)
+    _,th = cv2.threshold(dif,40,255,cv2.THRESH_BINARY)
+    cnts,_= cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    for c in cnts:
+        area = cv2.contourArea(c)
+        #Nos quedamos con los que tengan una área mayor a 9000 pixeles 
+        if area > 9000:
+            mov=True
+            x,y,w,h = cv2.boundingRect(c)
+            #boundingRect devuelve las coordenadas ancho y alto del contorno
+            cv2.rectangle(img_color,(x,y), (x+w,y+h),(0,255,0),2)
+            #Dibujamos el rectangulo en frame de color rojo (0,255,0) y de grueso 2
+    return mov
+
+def detect_face(imagen_bin,imagen_color,faceClassif):
+    scalefactor=1.3
+    minNeighbors=5
+    persona = False
+    faces = faceClassif.detectMultiScale(imagen_bin,scalefactor,minNeighbors)
+    for (x,y,w,h) in faces:
+        cv2.rectangle(imagen_color,(x,y),(x+w,y+h),(0,255,0),2)
+        persona = True
+    return persona
+    #para cada rostro deetctado, se hará una rectangulo en frame
+    #en la imagen en blanco y negro (gray) se buscan caras
+    #1.3 = factor de escala (que tanto se reduce la imagen para hacer el análsis,si muy alto se pierden detecciones, si muy bajo dura mucho)
+    #5= mínimo de vecinos cercanos (mínimo de cuadritos que deben identificar esa cara)
+
+def guardar_reg_diario_en_general():
+    reg_diario = open("Registro_Diario.txt", "r")
+    reg_general = open("Registro_General.txt", "a")
+    for line in reg_diario:
+        reg_general.write(line)
+    reg_diario.close()
+    reg_general.close()
+
+def son_las_12():
+    hora = datetime.now().hour
+    minutos = datetime.now().minute
+    segundos = datetime.now().second
+    if (hora == 14) & (minutos == 53) & (segundos == 0):
+        return True
+    else:
+        return False
+
+def registrar_intrusion(tipo_intrusion,n):
+    reg_diario = open("Registro_Diario.txt", "a")
+    reg_diario.write(str(n) + " ")
+    reg_diario.write("Tipo de Intrusion: ")
+    reg_diario.write(tipo_intrusion)
+    reg_diario.write("   ")
+    reg_diario.write("Fecha y Hora: ")
+    fecha_hora = str(datetime.now())
+    reg_diario.write(fecha_hora)
+    reg_diario.write('\n')
+    reg_diario.close()
+
+def borrar_reg_diario():
+    reg_diario = open("Registro_Diario.txt", "w")
+    reg_diario.close()
+
+def tipo_intrusion(cara_detectada):
+    if cara_detectada == True:
+        tipo = "Persona"
+    if cara_detectada == False:
+        tipo= "Animal"
+    return tipo
+
+def guardar_pic(img_counter,frame):
+    img_name = "image_{}.png".format(img_counter)
+    cv2.imwrite(img_name,frame)
+    img_counter +=1
+    return img_counter
+
+def detectar():
+    video = cv2.VideoCapture(0)
+    #Captura video
+    #El 0 indica la cámara, se cambia si hay más cámras conectadas (cada cámara es un #)
+    #se puede poner entre los () el nombre de un archivo y lo analiza
+
+    faceClassif = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+    #Cargamos el clasificador
+    #El archivo .xml debe estar  en la misma carpeta que programa
+
+    i = 0
+    n = 0
+    #Se inicializa un contador
+
+    img_counter = 0
+
+    while True:
+        ret,frame = video.read()
+        condicion=son_las_12()
+        if condicion == True:
+            guardar_reg_diario_en_general()
+            borrar_reg_diario()
+        #se crea la variable ret (return) y la variable frame
+        #video.read() devuelve true si imagen es leída
+        #devuelve false si no se ha inicializado captura de imagen
+        
+        if ret == False:break
+        #Se cierra ciclo si no se está grabando
+        cv2.imshow('Video',frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        
+        gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+        #Se pone la imagen del video en blanco y negro
+
+        if i == 20:
+            bgGray = gray
+            #bg Gray es el fondo en blanco y negro
+            #En bgGray se guarda gray cuando el contador está en 20
+            #Se hace cuando i=20 porque si i=1, la imagen que se guarda como fondo es muy oscura
+
+        if i > 20:
+            mov=detect_mov(gray,bgGray,frame)
+            if mov == True:
+                n=n+1
+                time.sleep(0.3)
+                cara_detectada = detect_face(gray,frame,faceClassif)
+                tipo=tipo_intrusion(cara_detectada)
+                registrar_intrusion(tipo,n)
+                img_counter=guardar_pic(img_counter,frame)
+                    
+        ##ver_video(frame)
+        #se crea ventana con el t´tulo Frame donde se muestra la variable frame (el video)
+        
+        i = i+1
+        #Se incrementa contador
+    video.release()
+    cv2.destroyAllWindows()
+
+
+
+
+
+
+
+#se cierran todas las ventanas
+root = Tk()
+root.config(bg="pink")
+root.resizable(True,True)
+root.geometry("320x145")
+miVentana = Ventana(root)
+#root.mainloop()
